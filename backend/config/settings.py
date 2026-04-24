@@ -1,6 +1,6 @@
 """
-Django settings for Expense Tracker (Ahammad).
-Production-ready for Render + Vercel.
+Django settings for Expense Tracker (Ahammad)
+Production-ready for Render + Vercel
 """
 
 from pathlib import Path
@@ -9,28 +9,24 @@ import dj_database_url
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# ── Security ────────────────────────────────────────────────
-SECRET_KEY = config(
-    "SECRET_KEY",
-    default="django-insecure-change-me-ahammad"
-)
+# ── SECURITY ────────────────────────────────────────────────
+SECRET_KEY = config("SECRET_KEY", default="django-insecure-change-me")
 
 DEBUG = config("DEBUG", default=False, cast=bool)
 
 ALLOWED_HOSTS = config(
     "ALLOWED_HOSTS",
-    default="127.0.0.1,localhost",
+    default="127.0.0.1,localhost,.onrender.com",
     cast=Csv()
 )
 
-# ── Applications ────────────────────────────────────────────
+# ── APPLICATIONS ────────────────────────────────────────────
 INSTALLED_APPS = [
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
     "django.contrib.sessions",
-    "django.contrib.messages",
-    "whitenoise.runserver_nostatic",
+    "django.contrib.messages",   # ✅ REQUIRED (fixes admin.E404)
     "django.contrib.staticfiles",
 
     # Third-party
@@ -38,15 +34,17 @@ INSTALLED_APPS = [
     "corsheaders",
     "django_filters",
 
-    # Local
+    # Local apps
     "expenses",
 ]
 
-# ── Middleware ──────────────────────────────────────────────
+# ── MIDDLEWARE ──────────────────────────────────────────────
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
-    "corsheaders.middleware.CorsMiddleware",  # ✅ IMPORTANT
+
+    "corsheaders.middleware.CorsMiddleware",  # MUST be high
+
     "django.middleware.common.CommonMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -56,15 +54,18 @@ MIDDLEWARE = [
 ]
 
 ROOT_URLCONF = "config.urls"
-
+print("SETTINGS FILE LOADED ✔")
+# ── TEMPLATES ───────────────────────────────────────────────
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
+        "DIRS": [],
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
+                "django.contrib.messages.context_processors.messages",  # ✅ REQUIRED
             ],
         },
     },
@@ -72,14 +73,15 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "config.wsgi.application"
 
-# ── Database (PostgreSQL via Render) ────────────────────────
+# ── DATABASE ────────────────────────────────────────────────
 DATABASES = {
     "default": dj_database_url.config(
-        default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}"
+        default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}",
+        conn_max_age=600
     )
 }
 
-# ── DRF ─────────────────────────────────────────────────────
+# ── REST FRAMEWORK ──────────────────────────────────────────
 REST_FRAMEWORK = {
     "DEFAULT_RENDERER_CLASSES": [
         "rest_framework.renderers.JSONRenderer",
@@ -91,10 +93,9 @@ REST_FRAMEWORK = {
         "django_filters.rest_framework.DjangoFilterBackend",
     ],
     "EXCEPTION_HANDLER": "expenses.exceptions.custom_exception_handler",
-    "DEFAULT_PAGINATION_CLASS": None,
 }
 
-# ── CORS & CSRF (CRITICAL FIX) ──────────────────────────────
+# ── CORS CONFIG (FIXED FOR VERCEL) ──────────────────────────
 CORS_ALLOW_ALL_ORIGINS = False
 
 CORS_ALLOWED_ORIGINS = config(
@@ -109,14 +110,15 @@ CSRF_TRUSTED_ORIGINS = config(
     cast=Csv()
 )
 
-CORS_ALLOW_CREDENTIALS = False
+CORS_ALLOW_CREDENTIALS = True
 
-# ── Static ─────────────────────────────────────────────────
+# ── STATIC FILES ────────────────────────────────────────────
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
+
 STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
-# ── Internationalisation ───────────────────────────────────
+# ── INTERNATIONALIZATION ─────────────────────────────────────
 LANGUAGE_CODE = "en-us"
 TIME_ZONE = "UTC"
 USE_I18N = True
@@ -124,10 +126,10 @@ USE_TZ = True
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-# ── Render HTTPS fix ───────────────────────────────────────
-SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+# ── RENDER HTTPS FIX ────────────────────────────────────────
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
-# ── Security headers ───────────────────────────────────────
+# ── SECURITY HEADERS (PRODUCTION) ───────────────────────────
 if not DEBUG:
     SECURE_BROWSER_XSS_FILTER = True
     SECURE_CONTENT_TYPE_NOSNIFF = True
