@@ -3,6 +3,11 @@ import { fetchExpenses, createExpense } from './api/expenses'
 
 function App() {
   const [expenses, setExpenses] = useState([])
+  const [total, setTotal] = useState('0')
+
+  const [category, setCategory] = useState('')
+  const [sort, setSort] = useState('date_desc')
+
   const [form, setForm] = useState({
     amount: '',
     category: 'food',
@@ -10,7 +15,6 @@ function App() {
     date: ''
   })
 
-  // ✅ Common input style
   const inputStyle = {
     height: '45px',
     padding: '10px',
@@ -34,8 +38,9 @@ function App() {
 
   async function loadExpenses() {
     try {
-      const data = await fetchExpenses()
+      const data = await fetchExpenses({ category, sort })
       setExpenses(data.results)
+      setTotal(data.total)
     } catch (err) {
       console.error(err)
     }
@@ -43,7 +48,7 @@ function App() {
 
   useEffect(() => {
     loadExpenses()
-  }, [])
+  }, [category, sort])
 
   async function handleSubmit(e) {
     e.preventDefault()
@@ -51,11 +56,7 @@ function App() {
     const errors = validateForm(form)
 
     if (Object.keys(errors).length > 0) {
-      const message = Object.entries(errors)
-        .map(([k, v]) => `${k}: ${v}`)
-        .join('\n')
-
-      alert(message)
+      alert(Object.entries(errors).map(([k, v]) => `${k}: ${v}`).join('\n'))
       return
     }
 
@@ -69,15 +70,15 @@ function App() {
         date: ''
       })
 
-      loadExpenses()
+      await loadExpenses()
 
     } catch (err) {
       if (err.details) {
-        const messages = Object.entries(err.details)
-          .map(([field, msgs]) => `${field}: ${msgs.join(', ')}`)
-          .join('\n')
-
-        alert(messages)
+        alert(
+          Object.entries(err.details)
+            .map(([f, msgs]) => `${f}: ${msgs.join(', ')}`)
+            .join('\n')
+        )
       } else {
         alert(err.message)
       }
@@ -87,6 +88,23 @@ function App() {
   return (
     <div style={{ padding: '30px', color: 'white' }}>
       <h1>Expense Tracker</h1>
+
+      {/* FILTERS */}
+      <h3>Filters</h3>
+
+      <select value={category} onChange={e => setCategory(e.target.value)} style={inputStyle}>
+        <option value="">All</option>
+        <option value="food">Food</option>
+        <option value="transport">Transport</option>
+        <option value="shopping">Shopping</option>
+      </select>
+
+      <select value={sort} onChange={e => setSort(e.target.value)} style={inputStyle}>
+        <option value="date_desc">Newest First</option>
+        <option value="date_asc">Oldest First</option>
+      </select>
+
+      <h3>Total: ₹{total}</h3>
 
       {/* FORM */}
       <form onSubmit={handleSubmit} style={{ marginBottom: '30px' }}>
