@@ -1,47 +1,52 @@
 """
-Django settings for Expense Tracker.
+Django settings for Expense Tracker (Ahammad).
 
-Reads secrets from environment variables (or a .env file via python-decouple).
-Falls back to safe development defaults so the app works out-of-the-box.
+Production-ready configuration for Render deployment.
 """
-
+import dj_database_url
 from pathlib import Path
 from decouple import config, Csv
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# ── Security ──────────────────────────────────────────────────────────────────
+# ── Security ────────────────────────────────────────────────────────────────
 SECRET_KEY = config(
     "SECRET_KEY",
-    default="django-insecure-change-me-in-production-use-a-long-random-string",
+    default="django-insecure-change-me-ahammad"
 )
 
 DEBUG = config("DEBUG", default=True, cast=bool)
 
-ALLOWED_HOSTS = ["*"]  # temporary, tighten later
+ALLOWED_HOSTS = config(
+    "ALLOWED_HOSTS",
+    default="127.0.0.1,localhost",
+    cast=Csv()
+)
 
-# ── Applications ──────────────────────────────────────────────────────────────
+# ── Applications ────────────────────────────────────────────────────────────
 INSTALLED_APPS = [
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
     "django.contrib.sessions",
     "django.contrib.messages",
-    "whitenoise.runserver_nostatic",  # serves static files even in DEBUG mode
+    "whitenoise.runserver_nostatic",
     "django.contrib.staticfiles",
+
     # Third-party
     "rest_framework",
     "corsheaders",
     "django_filters",
+
     # Local
     "expenses",
 ]
 
-# ── Middleware ─────────────────────────────────────────────────────────────────
+# ── Middleware ──────────────────────────────────────────────────────────────
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
-    "whitenoise.middleware.WhiteNoiseMiddleware",  # must be right after SecurityMiddleware
-    "corsheaders.middleware.CorsMiddleware",       # must be before CommonMiddleware
+    "whitenoise.middleware.WhiteNoiseMiddleware",
+    "corsheaders.middleware.CorsMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -70,19 +75,16 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "config.wsgi.application"
 
-# ── Database ──────────────────────────────────────────────────────────────────
-# SQLite is the right choice for a personal-finance tool:
-#   - zero infrastructure, single file, easy to back up
-#   - supports DECIMAL arithmetic correctly via Python's decimal module
-#   - can be swapped to Postgres with a one-line settings change
+# ── Database ────────────────────────────────────────────────────────────────
+import dj_database_url
+
 DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / config("DB_NAME", default="db.sqlite3"),
-    }
+    "default": dj_database_url.config(
+        default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}"
+    )
 }
 
-# ── Django REST Framework ──────────────────────────────────────────────────────
+# ── Django REST Framework ───────────────────────────────────────────────────
 REST_FRAMEWORK = {
     "DEFAULT_RENDERER_CLASSES": [
         "rest_framework.renderers.JSONRenderer",
@@ -93,37 +95,45 @@ REST_FRAMEWORK = {
     "DEFAULT_FILTER_BACKENDS": [
         "django_filters.rest_framework.DjangoFilterBackend",
     ],
-    # Return structured errors: {"error": "...", "details": {...}}
     "EXCEPTION_HANDLER": "expenses.exceptions.custom_exception_handler",
-    "DEFAULT_PAGINATION_CLASS": None,  # no pagination for now (personal tool)
+    "DEFAULT_PAGINATION_CLASS": None,
 }
 
-# ── CORS ──────────────────────────────────────────────────────────────────────
-# In development allow the Vite dev server.
-# In production set CORS_ALLOWED_ORIGINS via environment variable.
+# ── CORS & CSRF ─────────────────────────────────────────────────────────────
 CORS_ALLOW_ALL_ORIGINS = False
 
-CORS_ALLOWED_ORIGINS = [
-    "https://ahammad-frontend.vercel.app"
-]
+CORS_ALLOWED_ORIGINS = config(
+    "CORS_ALLOWED_ORIGINS",
+    default="",
+    cast=Csv()
+)
+
+CSRF_TRUSTED_ORIGINS = config(
+    "CSRF_TRUSTED_ORIGINS",
+    default="",
+    cast=Csv()
+)
+
 CORS_ALLOW_CREDENTIALS = False
-CSRF_TRUSTED_ORIGINS = [
-    "https://ahammad-frontend.vercel.app"
-]
-# ── Static files ──────────────────────────────────────────────────────────────
+
+# ── Static files ────────────────────────────────────────────────────────────
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
+
 STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
-# ── Internationalisation ──────────────────────────────────────────────────────
+# ── Internationalisation ────────────────────────────────────────────────────
 LANGUAGE_CODE = "en-us"
 TIME_ZONE = "UTC"
 USE_I18N = True
-USE_TZ = True  # store all datetimes as UTC; convert in the frontend
+USE_TZ = True
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
-DEBUG=False
-# ── Security headers (active in production when DEBUG=False) ───────────────────
+
+# ── Render / HTTPS Fix ──────────────────────────────────────────────────────
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
+# ── Security headers (only in production) ───────────────────────────────────
 if not DEBUG:
     SECURE_BROWSER_XSS_FILTER = True
     SECURE_CONTENT_TYPE_NOSNIFF = True
