@@ -81,6 +81,7 @@ function App() {
         )
       } else {
         alert(err.message)
+        console.error("API Validation Error:", err.details);
       }
     }
   }
